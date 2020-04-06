@@ -1,6 +1,7 @@
 from django.urls import reverse
 from django.db import models
 from django_countries.fields import CountryField
+from django.conf import settings
 
 # TimeStampedModel automatically gives the model created and modified fields,
 # which automatically track when the object is created or modified.
@@ -28,6 +29,12 @@ class Cheese(TimeStampedModel):
     # But we don’t set null=True because Django’s convention is to store empty values as the empty string, and to
     # retrieve NULL/empty values as the empty string.
     country_of_origin = CountryField("Country of Origin", blank=True) #from django-countries third party app
+
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL
+    )
 
     def __str__(self):
         return self.name
