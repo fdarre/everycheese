@@ -17,3 +17,11 @@ class CheeseCreateView(LoginRequiredMixin, CreateView):
         'firmness',
         'country_of_origin',
     ]
+
+    # We can override a CreateView’s form_valid() method to insert form data
+    # AFTER validation occurs.
+    # there’s no need to validate the value of creator: it comes from our code,
+    # not from user input.
+    def form_valid(self, form):
+        form.instance.creator = self.request.user
+        return super().form_valid(form)
