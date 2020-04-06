@@ -1,4 +1,5 @@
 from django.db import models
+from django_countries.fields import CountryField
 
 # TimeStampedModel automatically gives the model created and modified fields,
 # which automatically track when the object is created or modified.
@@ -22,6 +23,10 @@ class Cheese(TimeStampedModel):
                          unique=True, always_update=False, populate_from="name")
     description = models.TextField("Description", blank=True) # use TextField when might need more then 255 characters
     firmness = models.CharField("Firmness", max_length=20, choices=Firmness.choices, default=Firmness.UNSPECIFIED)
+    #We want country_of_origin to be optional, since it might be unknown for some cheeses, and so we set blank=True.
+    # But we don’t set null=True because Django’s convention is to store empty values as the empty string, and to
+    # retrieve NULL/empty values as the empty string.
+    country_of_origin = CountryField("Country of Origin", blank=True) #from django-countries third party app
 
     def __str__(self):
         return self.name
