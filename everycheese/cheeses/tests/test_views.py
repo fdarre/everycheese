@@ -10,10 +10,11 @@ from ..models import Cheese
 from ..views import (
     CheeseCreateView,
     CheeseListView,
-    CheeseDetailView
+    CheeseDetailView,
+    CheeseUpdateView
 )
 
-from .factories import CheeseFactory
+from .factories import CheeseFactory, cheese
 
 pytestmark = pytest.mark.django_db
 
@@ -38,29 +39,30 @@ def test_good_cheese_list_view(rf):
     # Get the request
     request = rf.get(reverse("cheeses:list"))
     # Use the request to get the response
-    response = CheeseListView.as_view()(request) # Test that the response is valid
+    response = CheeseListView.as_view()(request)
+    # Test that the response is valid
     assertContains(response, 'Cheese List')
 
-def test_good_cheese_detail_view(rf):
+def test_good_cheese_detail_view(rf, cheese):
     # Order some cheese from the CheeseFactory
-    cheese = CheeseFactory()
     # Make a request for our new cheese
     url = reverse("cheeses:detail", kwargs={'slug': cheese.slug})
     request = rf.get(url)
     # Use the request to get the response
     callable_obj = CheeseDetailView.as_view()
-    response = callable_obj(request, slug=cheese.slug) # Test that the response is valid
+    response = callable_obj(request, slug=cheese.slug)
+    # Test that the response is valid
     assertContains(response, cheese.name)
 
 def test_good_cheese_create_view(rf, admin_user):
-    # Order some cheese from the CheeseFactory
-    cheese = CheeseFactory()
+    # Order some cheese from the CheeseFactory via the test fixture
     # Make a request for our new cheese
     request = rf.get(reverse("cheeses:add"))
     # Add an authenticated user
     request.user = admin_user
     # Use the request to get the response
-    response = CheeseCreateView.as_view()(request) # Test that the response is valid
+    response = CheeseCreateView.as_view()(request)
+    # Test that the response is valid
     assert response.status_code == 200
 
 def test_cheese_list_contains_2_cheeses(rf): # Let's create a couple cheeses
@@ -74,8 +76,7 @@ def test_cheese_list_contains_2_cheeses(rf): # Let's create a couple cheeses
     assertContains(response, cheese1.name)
     assertContains(response, cheese2.name)
 
-def test_detail_contains_cheese_data(rf):
-    cheese = CheeseFactory()
+def test_detail_contains_cheese_data(rf, cheese):
     # Make a request for our new cheese
     url = reverse("cheeses:detail", kwargs={'slug': cheese.slug})
     request = rf.get(url)
@@ -103,3 +104,44 @@ def test_cheese_create_form_valid(rf, admin_user):
     assert cheese.description == "A salty hard cheese"
     assert cheese.firmness == Cheese.Firmness.HARD
     assert cheese.creator == admin_user
+
+def test_good_cheese_update_view(rf, admin_user, cheese):
+    url = reverse("cheeses:update",
+                  kwargs={'slug': cheese.slug}) # Make a request for our new cheese
+    request = rf.get(url)
+    # Add an authenticated user
+    request.user = admin_user
+    # Use the request to get the response
+    callable_obj = CheeseUpdateView.as_view()
+    response = callable_obj(request, slug=cheese.slug)
+    # Test that the response is valid
+    assertContains(response, "Update Cheese")
+
+def test_cheese_update(rf, admin_user, cheese):
+    """POST request to CheeseUpdateView updates a cheese
+    and redirects. """
+    # Make a request for our new cheese
+    form_data = {
+        'name': cheese.name,
+        'description': 'Something new',
+        'firmness': cheese.firmness
+    }
+
+    url = reverse("cheeses:update",
+                kwargs={'slug': cheese.slug})
+
+    request = rf.post(url, form_data)
+
+    request.user = admin_user
+
+    callable_obj = CheeseUpdateView.as_view()
+
+    response = callable_obj(request, slug=cheese.slug)
+
+    #  to update the cheese instance with the latest values from the database.
+    #  This is needed because the database was modified, the old cheese
+    #  object is stale until refreshed.
+    # Check that the cheese has been changed
+
+    cheese.refresh_from_db()
+    assert cheese.description == 'Something new'
